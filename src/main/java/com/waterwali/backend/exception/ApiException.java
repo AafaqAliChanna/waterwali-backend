@@ -1,0 +1,18 @@
+package com.waterwali.backend.exception;
+
+import org.springframework.http.HttpStatus;
+
+// A generic "something went wrong for a known business reason" exception.
+// e.g. "phone already registered" or "invalid credentials".
+public class ApiException extends RuntimeException {
+    private final HttpStatus status;
+
+    public ApiException(String message, HttpStatus status) {
+        super(message);
+        this.status = status;
+    }
+
+    public HttpStatus getStatus() {
+        return status;
+    }
+}
