@@ -22,6 +22,25 @@ public class OrderController {
         this.orderService = orderService;
     }
 
+    @GetMapping("/nearby")
+public ResponseEntity<List<OrderResponse>> getNearbyOrders(@RequestParam double latitude,
+                                                             @RequestParam double longitude,
+                                                             @RequestParam(defaultValue = "5") double radiusKm,
+                                                             Authentication authentication) {
+    if (!CurrentUser.hasRole(authentication, "DRIVER")) {
+        throw new com.waterwali.backend.exception.ApiException("Only drivers can view nearby orders", org.springframework.http.HttpStatus.FORBIDDEN);
+    }
+    return ResponseEntity.ok(orderService.getNearbyPendingOrders(latitude, longitude, radiusKm));
+}
+
+@PostMapping("/{id}/accept")
+public ResponseEntity<OrderResponse> acceptOrder(@PathVariable UUID id, Authentication authentication) {
+    if (!CurrentUser.hasRole(authentication, "DRIVER")) {
+        throw new com.waterwali.backend.exception.ApiException("Only drivers can accept orders", org.springframework.http.HttpStatus.FORBIDDEN);
+    }
+    return ResponseEntity.ok(orderService.acceptOrder(id, CurrentUser.id(authentication)));
+}
+
     // POST http://localhost:8080/api/orders   (requires "Authorization: Bearer <token>")
     @PostMapping
     public ResponseEntity<OrderResponse> createOrder(@Valid @RequestBody CreateOrderRequest request,
