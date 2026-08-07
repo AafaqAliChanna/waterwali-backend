@@ -49,6 +49,8 @@ public class OrderService {
             throw new ApiException("Unsupported tanker size", HttpStatus.BAD_REQUEST);
         }
 
+        
+
         // JTS Point constructor takes (longitude, latitude) -- in that order, which
         // trips up almost every beginner, since we normally say "lat, long" out loud.
         Point pickupLocation = GEOMETRY_FACTORY.createPoint(
@@ -65,6 +67,28 @@ public class OrderService {
 
         Order saved = orderRepository.save(order);
         return toResponse(saved);
+    }
+
+    public List<OrderResponse> getNearbyPendingOrders(double latitude, double longitude, double radiusKm) {
+        double radiusMeters = radiusKm * 1000;
+        return orderRepository.findNearbyPending(latitude, longitude, radiusMeters)
+                .stream()
+                .map(this::toResponse)
+                .toList();
+    }
+
+    @org.springframework.transaction.annotation.Transactional
+    public OrderResponse acceptOrder(UUID orderId, UUID driverId) {
+        int updatedRows = orderRepository.acceptOrder(orderId, driverId);
+
+        if (updatedRows == 0) {
+            // Either the order never existed, or another driver grabbed it first.
+            throw new ApiException("This order is no longer available", HttpStatus.CONFLICT);
+        }
+
+        Order order = orderRepository.findById(orderId)
+                .orElseThrow(() -> new ApiException("Order not found", HttpStatus.NOT_FOUND));
+        return toResponse(order);
     }
 
     public List<OrderResponse> getMyOrders(UUID customerId) {
