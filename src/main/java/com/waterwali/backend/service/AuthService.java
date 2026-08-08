@@ -20,11 +20,15 @@ public class AuthService {
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtUtil jwtUtil;
+    // Drivers need a wallet immediately so balance checks work from their first login.
+    private final WalletService walletService;
 
-    public AuthService(UserRepository userRepository, PasswordEncoder passwordEncoder, JwtUtil jwtUtil) {
+    public AuthService(UserRepository userRepository, PasswordEncoder passwordEncoder, JwtUtil jwtUtil,
+                       WalletService walletService) {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
         this.jwtUtil = jwtUtil;
+        this.walletService = walletService;
     }
 
     public AuthResponse register(RegisterRequest request) {
@@ -46,6 +50,11 @@ public class AuthService {
                 .build();
 
         User saved = userRepository.save(user);
+
+        // Create the driver's wallet at registration so online access can be checked safely.
+        if (saved.getRole() == Role.DRIVER) {
+            walletService.createWalletForDriver(saved.getId());
+        }
 
         String token = jwtUtil.generateToken(saved.getPhone(), saved.getRole().name(), saved.getId().toString());
         return new AuthResponse(token, saved.getId(), saved.getName(), saved.getRole());

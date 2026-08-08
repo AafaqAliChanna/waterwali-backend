@@ -4,6 +4,7 @@ import com.waterwali.backend.dto.CreateOrderRequest;
 import com.waterwali.backend.dto.OrderResponse;
 import com.waterwali.backend.security.CurrentUser;
 import com.waterwali.backend.service.OrderService;
+import com.waterwali.backend.service.WalletService;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
@@ -17,9 +18,12 @@ import java.util.UUID;
 public class OrderController {
 
     private final OrderService orderService;
+    // WalletService completes the driver's order and records the commission atomically.
+    private final WalletService walletService;
 
-    public OrderController(OrderService orderService) {
+    public OrderController(OrderService orderService, WalletService walletService) {
         this.orderService = orderService;
+        this.walletService = walletService;
     }
 
     @GetMapping("/nearby")
@@ -39,6 +43,15 @@ public ResponseEntity<OrderResponse> acceptOrder(@PathVariable UUID id, Authenti
         throw new com.waterwali.backend.exception.ApiException("Only drivers can accept orders", org.springframework.http.HttpStatus.FORBIDDEN);
     }
     return ResponseEntity.ok(orderService.acceptOrder(id, CurrentUser.id(authentication)));
+}
+
+// Only drivers can complete orders because completion charges their wallet commission.
+@PostMapping("/{id}/complete")
+public ResponseEntity<OrderResponse> completeOrder(@PathVariable UUID id, Authentication authentication) {
+    if (!CurrentUser.hasRole(authentication, "DRIVER")) {
+        throw new com.waterwali.backend.exception.ApiException("Only drivers can complete orders", org.springframework.http.HttpStatus.FORBIDDEN);
+    }
+    return ResponseEntity.ok(walletService.completeOrder(id, CurrentUser.id(authentication)));
 }
 
     // POST http://localhost:8080/api/orders   (requires "Authorization: Bearer <token>")
