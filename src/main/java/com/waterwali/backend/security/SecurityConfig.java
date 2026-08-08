@@ -45,6 +45,7 @@ public class SecurityConfig {
             .authorizeHttpRequests(auth -> auth
                 // Phase 2: /api/orders/** requires a valid JWT -- covered by anyRequest().authenticated() below.
                 .requestMatchers("/api/auth/**").permitAll()
+                .requestMatchers("/ws/**").permitAll()   // handshake only -- individual messages still carry the driver's identity
                 .anyRequest().authenticated()
             )
             .sessionManagement(session -> session
